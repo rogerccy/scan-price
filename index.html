@@ -185,7 +185,7 @@
 
   <div id="scanner-section">
     <div id="reader"></div>
-    <p id="hint">將條碼對準框內，自動辨識</p>
+    <p id="hint">將相機對準條碼，保持穩定</p>
   </div>
 
   <div id="result-section">
@@ -246,17 +246,18 @@
 
       scanner = new Html5Qrcode("reader");
       scanner.start(
-        { facingMode: "environment" },
+        { facingMode: "environment", advanced: [{ width: 1280, height: 720 }] },
         {
-          fps: 10,
-          qrbox: { width: 260, height: 120 },
+          fps: 15,
+          aspectRatio: 1.7777778,
           formatsToSupport: [
             Html5QrcodeSupportedFormats.EAN_13,
             Html5QrcodeSupportedFormats.EAN_8,
             Html5QrcodeSupportedFormats.UPC_A,
             Html5QrcodeSupportedFormats.UPC_E,
             Html5QrcodeSupportedFormats.CODE_128,
-          ]
+          ],
+          experimentalFeatures: { useBarCodeDetectorIfSupported: true }
         },
         onScanSuccess,
         () => {}

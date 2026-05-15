@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="掃碼比價">
+  <title>掃碼比價</title>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #111;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    header {
+      width: 100%;
+      padding: 16px 20px;
+      text-align: center;
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #222;
+    }
+
+    #scanner-section {
+      width: 100%;
+      max-width: 480px;
+    }
+
+    #reader {
+      width: 100%;
+    }
+
+    /* 覆蓋 html5-qrcode 預設樣式 */
+    #reader video {
+      width: 100% !important;
+    }
+
+    #hint {
+      text-align: center;
+      color: #888;
+      font-size: 14px;
+      padding: 12px 20px;
+    }
+
+    /* 結果畫面 */
+    #result-section {
+      display: none;
+      width: 100%;
+      max-width: 480px;
+      padding: 24px 20px;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    #result-section.show {
+      display: flex;
+    }
+
+    .barcode-num {
+      color: #555;
+      font-size: 13px;
+      letter-spacing: 1px;
+    }
+
+    .product-name {
+      font-size: 18px;
+      font-weight: 600;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .not-found {
+      color: #888;
+      font-size: 14px;
+    }
+
+    .divider {
+      width: 40px;
+      height: 1px;
+      background: #333;
+      margin: 4px 0;
+    }
+
+    .btn {
+      display: block;
+      width: 100%;
+      padding: 16px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+      border: none;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: #ff3b30;
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: #1c1c1e;
+      color: #fff;
+      border: 1px solid #333;
+    }
+
+    #loading {
+      display: none;
+      color: #888;
+      font-size: 14px;
+      padding: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>掃碼比價</header>
+
+  <div id="scanner-section">
+    <div id="reader"></div>
+    <p id="hint">將條碼對準框內，自動辨識</p>
+  </div>
+
+  <div id="result-section">
+    <p class="barcode-num" id="barcode-display"></p>
+    <div class="divider"></div>
+    <p class="product-name" id="product-display"></p>
+    <p id="loading">查詢商品中...</p>
+    <a id="biggo-btn" class="btn btn-primary" target="_blank">在 BigGo 比價 →</a>
+    <button class="btn btn-secondary" onclick="restart()">重新掃描</button>
+  </div>
+
+  <script>
+    let scanner = null;
+
+    function startScanner() {
+      document.getElementById('scanner-section').style.display = 'block';
+      document.getElementById('result-section').classList.remove('show');
+
+      scanner = new Html5Qrcode("reader");
+      scanner.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 260, height: 120 },
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.CODE_128,
+          ]
+        },
+        onScanSuccess,
+        () => {}
+      ).catch(err => {
+        document.getElementById('hint').textContent = '無法開啟相機，請確認已授權。';
+      });
+    }
+
+    async function onScanSuccess(barcode) {
+      await scanner.stop();
+      scanner = null;
+
+      document.getElementById('scanner-section').style.display = 'none';
+      document.getElementById('barcode-display').textContent = '條碼：' + barcode;
+      document.getElementById('product-display').textContent = '';
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('biggo-btn').style.display = 'none';
+      document.getElementById('result-section').classList.add('show');
+
+      let query = barcode;
+      let name = '';
+
+      try {
+        const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
+        const data = await res.json();
+        if (data.status === 1 && data.product) {
+          name = data.product.product_name_zh
+            || data.product.product_name_zh_TW
+            || data.product.product_name
+            || '';
+        }
+      } catch (_) {}
+
+      document.getElementById('loading').style.display = 'none';
+
+      if (name) {
+        document.getElementById('product-display').textContent = name;
+        query = name;
+      } else {
+        document.getElementById('product-display').innerHTML =
+          '<span class="not-found">找不到商品名稱，以條碼搜尋</span>';
+      }
+
+      const url = `https://biggo.com.tw/s/${encodeURIComponent(query)}`;
+      const btn = document.getElementById('biggo-btn');
+      btn.href = url;
+      btn.style.display = 'block';
+    }
+
+    function restart() {
+      startScanner();
+    }
+
+    startScanner();
+  </script>
+</body>
+</html>

@@ -352,6 +352,10 @@
       window.open(`https://biggo.com.tw/s/${encodeURIComponent(q)}`, '_blank');
     }
 
+    function restart() {
+      window.location.reload();
+    }
+
     function showBadge(cls, text) {
       const b = document.getElementById('status-badge');
       b.className = 'badge ' + cls;

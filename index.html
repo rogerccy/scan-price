@@ -156,14 +156,14 @@
     <button class="btn btn-primary" id="biggo-btn" onclick="openBiggo()" style="display:none;">在 BigGo 比價 →</button>
     <button class="btn btn-danger" id="forget-btn" onclick="forgetBarcode()" style="display:none;">刪除此商品記憶</button>
     <button class="btn btn-secondary" id="lens-pick-btn" onclick="openLens()">以圖搜尋 Google Lens →</button>
-    <button class="btn btn-primary" id="lens-submit-btn" onclick="submitLens()" style="display:none;">開啟 Google Lens 搜尋 →</button>
+    <div id="lens-preview-wrap" style="display:none; width:100%; text-align:center;">
+      <img id="lens-preview" style="max-width:100%; border-radius:12px; max-height:220px; object-fit:contain; -webkit-touch-callout:default;">
+      <p style="font-size:12px; color:#888; margin-top:8px;">長按圖片 → 以 Google Lens 搜尋</p>
+    </div>
     <button class="btn btn-secondary" onclick="showHome()">返回</button>
   </div>
 
-  <!-- Hidden form for Google Lens image upload -->
-  <form id="lens-form" method="POST" action="https://lens.google.com/upload" enctype="multipart/form-data" target="_blank" style="display:none;">
-    <input id="lens-file" type="file" name="encoded_image" accept="image/*" capture="environment">
-  </form>
+  <input id="lens-file" type="file" accept="image/*" capture="environment" style="display:none;">
 
   <!-- Settings -->
   <div id="settings-section">
@@ -303,8 +303,9 @@
       document.getElementById('query-input').style.display = 'none';
       document.getElementById('sync-status').textContent = '';
       document.getElementById('lens-pick-btn').style.display = 'block';
-      document.getElementById('lens-submit-btn').style.display = 'none';
-      document.getElementById('lens-file').value = '';
+      document.getElementById('lens-pick-btn').textContent = '以圖搜尋 Google Lens →';
+      document.getElementById('lens-preview-wrap').style.display = 'none';
+      document.getElementById('lens-preview').src = '';
       document.getElementById('result-section').classList.add('show');
 
       const cached = getCachedName(barcode);
@@ -437,21 +438,17 @@
     function openLens() {
       const fileInput = document.getElementById('lens-file');
       fileInput.onchange = () => {
-        if (fileInput.files.length > 0) {
-          document.getElementById('lens-pick-btn').style.display = 'none';
-          document.getElementById('lens-submit-btn').style.display = 'block';
-        }
+        if (!fileInput.files.length) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          document.getElementById('lens-preview').src = e.target.result;
+          document.getElementById('lens-preview-wrap').style.display = 'block';
+          document.getElementById('lens-pick-btn').textContent = '重新拍照';
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+        fileInput.value = '';
       };
       fileInput.click();
-    }
-
-    function submitLens() {
-      window.open('about:blank', 'lenswindow');
-      document.getElementById('lens-form').target = 'lenswindow';
-      document.getElementById('lens-form').submit();
-      document.getElementById('lens-submit-btn').style.display = 'none';
-      document.getElementById('lens-pick-btn').style.display = 'block';
-      document.getElementById('lens-file').value = '';
     }
 
     syncFromGist().then(() => showHome());

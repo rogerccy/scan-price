@@ -184,6 +184,7 @@
     const GIST_ID_KEY = 'gist_id';
     let currentBarcode = '';
     let scanner = null;
+    let cameraUsed = false;
 
     function getDB() {
       try { return JSON.parse(localStorage.getItem(DB_KEY) || '{}'); } catch { return {}; }
@@ -262,6 +263,8 @@
     }
 
     function startScanner() {
+      if (cameraUsed) { window.location.reload(); return; }
+      cameraUsed = true;
       hideAll();
       document.getElementById('scanner-section').style.display = 'block';
       document.getElementById('hint').textContent = '將相機對準條碼，保持穩定';

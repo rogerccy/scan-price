@@ -309,10 +309,11 @@
       const q = document.getElementById('query-input').value.trim() || currentBarcode;
       if (!q) return;
 
-      const isNew = !getCachedName(currentBarcode);
+      const existing = getCachedName(currentBarcode);
+      const changed = existing !== q;
       cacheName(currentBarcode, q);
 
-      if (isNew && /[一-鿿]/.test(q)) {
+      if (changed && /[一-鿿]/.test(q)) {
         document.getElementById('sync-status').textContent = '同步到雲端...';
         const ok = await syncToGist();
         document.getElementById('sync-status').textContent = ok ? '已同步' : '同步失敗（已存本機）';

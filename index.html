@@ -155,8 +155,14 @@
     <p id="sync-status"></p>
     <button class="btn btn-primary" id="biggo-btn" onclick="openBiggo()" style="display:none;">在 BigGo 比價 →</button>
     <button class="btn btn-danger" id="forget-btn" onclick="forgetBarcode()" style="display:none;">刪除此商品記憶</button>
+    <button class="btn btn-secondary" onclick="openLens()">以圖搜尋 Google Lens →</button>
     <button class="btn btn-secondary" onclick="showHome()">返回</button>
   </div>
+
+  <!-- Hidden form for Google Lens image upload -->
+  <form id="lens-form" method="POST" action="https://lens.google.com/upload" enctype="multipart/form-data" target="_blank" style="display:none;">
+    <input id="lens-file" type="file" name="encoded_image" accept="image/*" capture="environment">
+  </form>
 
   <!-- Settings -->
   <div id="settings-section">
@@ -420,6 +426,17 @@
         document.getElementById('build-ver').textContent =
           'deployed: ' + t.toLocaleString('zh-TW', {timeZone:'Asia/Taipei'});
       }).catch(() => {});
+
+    function openLens() {
+      const fileInput = document.getElementById('lens-file');
+      fileInput.onchange = () => {
+        if (fileInput.files.length > 0) {
+          document.getElementById('lens-form').submit();
+          fileInput.value = '';
+        }
+      };
+      fileInput.click();
+    }
 
     syncFromGist().then(() => showHome());
   </script>

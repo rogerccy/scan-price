@@ -118,6 +118,7 @@
 <body>
 
   <header>
+    <button class="header-btn" id="home-btn" style="left:16px;right:auto;display:none;" onclick="showHome()">首頁</button>
     掃碼比價
     <button class="header-btn" id="settings-btn" onclick="toggleSettings()">設定</button>
   </header>
@@ -255,8 +256,13 @@
       document.getElementById('settings-section').classList.remove('show');
     }
 
+    function setHomeBtn(visible) {
+      document.getElementById('home-btn').style.display = visible ? 'block' : 'none';
+    }
+
     function showHome() {
       hideAll();
+      setHomeBtn(false);
       document.getElementById('settings-btn').textContent = '設定';
       document.getElementById('history-search').value = '';
       renderHistory();
@@ -267,6 +273,7 @@
       if (cameraUsed) { window.location.reload(); return; }
       cameraUsed = true;
       hideAll();
+      setHomeBtn(true);
       document.getElementById('scanner-section').style.display = 'block';
       document.getElementById('hint').textContent = '將相機對準條碼，保持穩定';
       setTimeout(() => {
@@ -366,6 +373,7 @@
         document.getElementById('gh-token').value = token;
         document.getElementById('gist-id').value = gistId;
         s.classList.add('show');
+        setHomeBtn(true);
         document.getElementById('settings-btn').textContent = '關閉';
       } else {
         showHome();
@@ -409,10 +417,11 @@
       list.innerHTML = entries.map(([barcode, name]) => `
         <div class="history-item">
           <div class="history-item-info" onclick="searchFromHistory('${name.replace(/'/g, "\\'")}')">
-            <div class="history-item-name">${name}</div>
+            <div class="history-item-name" id="hname-${barcode}">${name}</div>
             <div class="history-item-barcode">${barcode}</div>
           </div>
           <div class="history-item-actions">
+            <button class="icon-btn" onclick="event.stopPropagation();editHistory('${barcode}')">✏️</button>
             <button class="icon-btn" onclick="deleteHistory('${barcode}')">🗑</button>
           </div>
         </div>
@@ -420,7 +429,37 @@
     }
 
     function searchFromHistory(name) {
+      if (document.querySelector('#history-list input')) return;
       window.open(`https://biggo.com.tw/s/${encodeURIComponent(name)}`, '_blank');
+    }
+
+    function editHistory(barcode) {
+      const nameDiv = document.getElementById('hname-' + barcode);
+      if (!nameDiv) return;
+      const currentName = getDB()[barcode] || '';
+      nameDiv.innerHTML = `<input
+        id="hedit-${barcode}"
+        style="width:100%;background:transparent;border:none;border-bottom:1px solid #555;color:#fff;font-size:15px;font-weight:600;padding:2px 0;outline:none;"
+        value="${currentName.replace(/"/g, '&quot;')}"
+        onclick="event.stopPropagation()"
+        onblur="saveHistoryEdit('${barcode}')"
+        onkeydown="if(event.key==='Enter'){this.blur();event.preventDefault();}">`;
+      setTimeout(() => {
+        const input = document.getElementById('hedit-' + barcode);
+        if (input) { input.focus(); input.select(); }
+      }, 50);
+    }
+
+    async function saveHistoryEdit(barcode) {
+      const input = document.getElementById('hedit-' + barcode);
+      if (!input) return;
+      const newName = input.value.trim();
+      const oldName = getDB()[barcode];
+      if (newName && newName !== oldName) {
+        cacheName(barcode, newName);
+        syncToGist();
+      }
+      renderHistory();
     }
 
     function deleteHistory(barcode) {

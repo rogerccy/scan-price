@@ -226,7 +226,7 @@
     }
 
     function hideAll() {
-      if (scanner) { scanner.stop().catch(() => {}); scanner = null; }
+      if (scanner) { scanner.stop().catch(() => {}); scanner = null; document.getElementById('reader').innerHTML = ''; }
       document.getElementById('scanner-section').style.display = 'none';
       document.getElementById('result-section').classList.remove('show');
       document.getElementById('settings-section').classList.remove('show');
@@ -262,6 +262,7 @@
 
     async function onScanSuccess(barcode) {
       await scanner.stop(); scanner = null;
+      document.getElementById('reader').innerHTML = '';
       currentBarcode = barcode;
 
       document.getElementById('scanner-section').style.display = 'none';

@@ -28,11 +28,36 @@
       background: none; border: none; color: #888;
       font-size: 13px; cursor: pointer; padding: 4px 8px;
     }
-    #scanner-section { width: 100%; max-width: 480px; }
+
+    /* Home section */
+    #home-section {
+      display: none; width: 100%; max-width: 480px;
+      padding: 20px 20px 0; flex-direction: column; gap: 12px;
+    }
+    #home-section.show { display: flex; }
+
+    .scan-btn {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      width: 100%; padding: 18px; border-radius: 14px;
+      font-size: 17px; font-weight: 700;
+      background: #ff3b30; color: #fff;
+      border: none; cursor: pointer; text-decoration: none;
+    }
+    .scan-btn-icon { font-size: 22px; }
+
+    .home-divider {
+      width: 100%; height: 1px; background: #222; margin: 4px 0;
+    }
+    .home-section-label { font-size: 12px; color: #555; letter-spacing: 0.5px; }
+
+    /* Scanner section */
+    #scanner-section { display: none; width: 100%; max-width: 480px; }
     #reader { width: 100%; }
     #reader video { width: 100% !important; }
     #hint { text-align: center; color: #888; font-size: 14px; padding: 12px 20px; }
+    #cancel-scan-wrap { padding: 8px 20px 20px; }
 
+    /* Result section */
     #result-section {
       display: none; width: 100%; max-width: 480px;
       padding: 24px 20px; flex-direction: column; align-items: center; gap: 12px;
@@ -49,7 +74,6 @@
       padding: 2px 8px; border-radius: 20px; margin-top: 4px;
     }
     .badge-cached { background: #1a3a1a; color: #4cd964; }
-    .badge-synced { background: #1a2a3a; color: #5ac8fa; }
 
     .btn {
       display: block; width: 100%; padding: 16px; border-radius: 12px;
@@ -67,6 +91,7 @@
       border: 1px solid #333; background: #1c1c1e; color: #fff; font-size: 15px;
     }
 
+    /* Settings section */
     #settings-section {
       display: none; width: 100%; max-width: 480px;
       padding: 24px 20px; flex-direction: column; gap: 12px;
@@ -75,21 +100,19 @@
     .settings-label { font-size: 13px; color: #888; }
     .settings-note { font-size: 12px; color: #555; text-align: center; line-height: 1.6; }
 
-    #history-section {
-      display: none; width: 100%; max-width: 480px;
-      padding: 16px 20px; flex-direction: column; gap: 8px;
-    }
-    #history-section.show { display: flex; }
+    /* History list (inside home section) */
     .history-item {
       background: #1c1c1e; border-radius: 12px; padding: 14px 16px;
       display: flex; justify-content: space-between; align-items: center; gap: 10px;
     }
-    .history-item-info { flex: 1; min-width: 0; }
+    .history-item-info { flex: 1; min-width: 0; cursor: pointer; padding: 4px 0; }
     .history-item-name { font-size: 15px; font-weight: 600; }
     .history-item-barcode { font-size: 12px; color: #555; margin-top: 2px; }
     .history-item-actions { display: flex; gap: 8px; flex-shrink: 0; }
     .icon-btn { background: none; border: none; color: #888; font-size: 20px; cursor: pointer; padding: 10px; }
     .history-empty { color: #555; font-size: 14px; text-align: center; padding: 40px 0; }
+
+    #history-list { display: flex; flex-direction: column; gap: 8px; }
   </style>
 </head>
 <body>
@@ -100,11 +123,27 @@
   </header>
   <p id="build-ver" style="font-size:10px;color:#666;padding:4px;"></p>
 
+  <!-- Home: scan button + history list -->
+  <div id="home-section">
+    <button class="scan-btn" onclick="startScanner()">
+      <span class="scan-btn-icon">📷</span> 掃描條碼
+    </button>
+    <div class="home-divider"></div>
+    <p class="home-section-label">商品記憶</p>
+    <input id="history-search" class="text-field" type="search" placeholder="搜尋商品名稱..." oninput="renderHistory()" style="display:block;">
+    <div id="history-list"></div>
+  </div>
+
+  <!-- Scanner -->
   <div id="scanner-section">
     <div id="reader"></div>
     <p id="hint">將相機對準條碼，保持穩定</p>
+    <div id="cancel-scan-wrap">
+      <button class="btn btn-secondary" onclick="showHome()">取消</button>
+    </div>
   </div>
 
+  <!-- Result -->
   <div id="result-section">
     <p class="barcode-num" id="barcode-display"></p>
     <div class="divider"></div>
@@ -116,9 +155,10 @@
     <p id="sync-status"></p>
     <button class="btn btn-primary" id="biggo-btn" onclick="openBiggo()" style="display:none;">在 BigGo 比價 →</button>
     <button class="btn btn-danger" id="forget-btn" onclick="forgetBarcode()" style="display:none;">刪除此商品記憶</button>
-    <button class="btn btn-secondary" onclick="restart()">重新掃描</button>
+    <button class="btn btn-secondary" onclick="showHome()">返回</button>
   </div>
 
+  <!-- Settings -->
   <div id="settings-section">
     <p class="settings-label">GitHub Token（gist 權限）</p>
     <input id="gh-token" class="text-field" type="password" placeholder="ghp_xxxx 或 gho_xxxx" style="display:block">
@@ -129,13 +169,6 @@
     <div style="width:100%;height:1px;background:#222;margin:4px 0;"></div>
     <button class="btn btn-secondary" id="manual-sync-btn" onclick="manualSync()">立即同步到雲端</button>
     <p id="manual-sync-status" style="font-size:12px;color:#555;text-align:center;"></p>
-    <button class="btn btn-secondary" onclick="toggleHistory()">查看商品紀錄</button>
-  </div>
-
-  <div id="history-section">
-    <input id="history-search" class="text-field" type="search" placeholder="搜尋商品名稱..." oninput="renderHistory()" style="display:block;">
-    <div id="history-list"></div>
-    <button class="btn btn-secondary" onclick="toggleHistory()">關閉</button>
   </div>
 
   <script>
@@ -173,7 +206,7 @@
         const content = data.files?.['barcode-names.json']?.content;
         if (content) {
           const remote = JSON.parse(content);
-          const merged = { ...remote, ...getDB() }; // local 優先
+          const merged = { ...remote, ...getDB() };
           saveDB(merged);
         }
       } catch (_) {}
@@ -197,42 +230,6 @@
       } catch { return false; }
     }
 
-    // 設定
-    function toggleSettings() {
-      const s = document.getElementById('settings-section');
-      const showing = s.classList.contains('show');
-      hideAll();
-      if (!showing) {
-        const { token, gistId } = getGistCreds();
-        document.getElementById('gh-token').value = token;
-        document.getElementById('gist-id').value = gistId;
-        s.classList.add('show');
-        document.getElementById('settings-btn').textContent = '關閉';
-      } else {
-        document.getElementById('settings-btn').textContent = '設定';
-        startScanner();
-      }
-    }
-
-    async function saveSettings() {
-      localStorage.setItem(GH_TOKEN_KEY, document.getElementById('gh-token').value.trim());
-      localStorage.setItem(GIST_ID_KEY, document.getElementById('gist-id').value.trim());
-      const btn = document.querySelector('#settings-section .btn-primary');
-      btn.textContent = '同步中...';
-      await syncFromGist();
-      btn.textContent = '儲存並同步';
-      hideAll();
-      document.getElementById('settings-btn').textContent = '設定';
-      startScanner();
-    }
-
-    function forgetBarcode() {
-      const db = getDB(); delete db[currentBarcode]; saveDB(db);
-      syncToGist();
-      document.getElementById('forget-btn').style.display = 'none';
-      document.getElementById('status-badge').style.display = 'none';
-    }
-
     function stopMediaTracks() {
       document.querySelectorAll('video').forEach(v => {
         if (v.srcObject) { v.srcObject.getTracks().forEach(t => t.stop()); v.srcObject = null; }
@@ -243,17 +240,24 @@
       if (scanner) { scanner.stop().catch(() => {}); scanner = null; }
       stopMediaTracks();
       document.getElementById('reader').innerHTML = '';
+      document.getElementById('home-section').classList.remove('show');
       document.getElementById('scanner-section').style.display = 'none';
       document.getElementById('result-section').classList.remove('show');
       document.getElementById('settings-section').classList.remove('show');
-      document.getElementById('history-section').classList.remove('show');
+    }
+
+    function showHome() {
+      hideAll();
+      document.getElementById('settings-btn').textContent = '設定';
+      document.getElementById('history-search').value = '';
+      renderHistory();
+      document.getElementById('home-section').classList.add('show');
     }
 
     function startScanner() {
       hideAll();
       document.getElementById('scanner-section').style.display = 'block';
       document.getElementById('hint').textContent = '將相機對準條碼，保持穩定';
-      document.getElementById('settings-btn').textContent = '設定';
       setTimeout(() => {
         scanner = new Html5Qrcode("reader");
         scanner.start(
@@ -276,6 +280,7 @@
 
     async function onScanSuccess(barcode) {
       await scanner.stop(); scanner = null;
+      stopMediaTracks();
       document.getElementById('reader').innerHTML = '';
       currentBarcode = barcode;
 
@@ -324,11 +329,41 @@
       window.open(`https://biggo.com.tw/s/${encodeURIComponent(q)}`, '_blank');
     }
 
-    function restart() { window.location.reload(); }
-
     function showBadge(cls, text) {
       const b = document.getElementById('status-badge');
       b.className = 'badge ' + cls; b.textContent = text; b.style.display = 'inline-block';
+    }
+
+    function forgetBarcode() {
+      const db = getDB(); delete db[currentBarcode]; saveDB(db);
+      syncToGist();
+      document.getElementById('forget-btn').style.display = 'none';
+      document.getElementById('status-badge').style.display = 'none';
+    }
+
+    function toggleSettings() {
+      const s = document.getElementById('settings-section');
+      const showing = s.classList.contains('show');
+      hideAll();
+      if (!showing) {
+        const { token, gistId } = getGistCreds();
+        document.getElementById('gh-token').value = token;
+        document.getElementById('gist-id').value = gistId;
+        s.classList.add('show');
+        document.getElementById('settings-btn').textContent = '關閉';
+      } else {
+        showHome();
+      }
+    }
+
+    async function saveSettings() {
+      localStorage.setItem(GH_TOKEN_KEY, document.getElementById('gh-token').value.trim());
+      localStorage.setItem(GIST_ID_KEY, document.getElementById('gist-id').value.trim());
+      const btn = document.querySelector('#settings-section .btn-primary');
+      btn.textContent = '同步中...';
+      await syncFromGist();
+      btn.textContent = '儲存並同步';
+      showHome();
     }
 
     async function manualSync() {
@@ -345,20 +380,6 @@
       status.style.color = ok ? '#4cd964' : '#ff453a';
     }
 
-    function toggleHistory() {
-      const h = document.getElementById('history-section');
-      const showing = h.classList.contains('show');
-      if (showing) {
-        h.classList.remove('show');
-        toggleSettings();
-      } else {
-        document.getElementById('settings-section').classList.remove('show');
-        document.getElementById('history-search').value = '';
-        renderHistory();
-        h.classList.add('show');
-      }
-    }
-
     function renderHistory() {
       const db = getDB();
       const list = document.getElementById('history-list');
@@ -371,7 +392,7 @@
       }
       list.innerHTML = entries.map(([barcode, name]) => `
         <div class="history-item">
-          <div class="history-item-info" onclick="searchFromHistory('${name}')" style="cursor:pointer;flex:1;padding:4px 0;">
+          <div class="history-item-info" onclick="searchFromHistory('${name.replace(/'/g, "\\'")}')">
             <div class="history-item-name">${name}</div>
             <div class="history-item-barcode">${barcode}</div>
           </div>
@@ -400,7 +421,7 @@
           'deployed: ' + t.toLocaleString('zh-TW', {timeZone:'Asia/Taipei'});
       }).catch(() => {});
 
-    syncFromGist().then(() => startScanner());
+    syncFromGist().then(() => showHome());
   </script>
 </body>
 </html>

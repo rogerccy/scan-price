@@ -137,6 +137,9 @@
     </p>
     <div class="divider" style="width:100%; margin: 8px 0;"></div>
     <button class="btn btn-secondary" onclick="toggleHistory()">查看商品紀錄</button>
+    <button class="btn btn-secondary" onclick="exportData()">匯出條碼資料</button>
+    <textarea id="export-area" style="display:none;width:100%;height:120px;padding:12px;border-radius:12px;border:1px solid #333;background:#1c1c1e;color:#aaa;font-size:12px;font-family:monospace;resize:none;" readonly></textarea>
+    <p id="export-hint" style="display:none;font-size:12px;color:#555;text-align:center;">全選複製後貼到 Claude 對話，請他幫你上傳到 Open Food Facts</p>
   </div>
 
   <!-- 歷史紀錄 -->
@@ -383,6 +386,20 @@
 
     function deleteHistory(barcode) {
       const db = getDB(); delete db[barcode]; saveDB(db); renderHistory();
+    }
+
+    function exportData() {
+      const db = getDB();
+      const area = document.getElementById('export-area');
+      const hint = document.getElementById('export-hint');
+      if (Object.keys(db).length === 0) {
+        area.value = '（尚無資料）';
+      } else {
+        area.value = JSON.stringify(db, null, 2);
+      }
+      area.style.display = 'block';
+      hint.style.display = 'block';
+      area.select();
     }
 
     startScanner();

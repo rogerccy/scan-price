@@ -102,6 +102,7 @@
     掃碼比價
     <button class="header-btn" id="settings-btn" onclick="toggleSettings()">設定</button>
   </header>
+  <p id="build-ver" style="font-size:10px;color:#333;padding:4px;"></p>
 
   <!-- 掃描 -->
   <div id="scanner-section">
@@ -420,6 +421,14 @@
       hint.style.display = 'block';
       area.select();
     }
+
+    fetch('https://api.github.com/repos/rogerccy/scan-price/commits/master')
+      .then(r => r.json())
+      .then(d => {
+        const t = new Date(d.commit.author.date);
+        document.getElementById('build-ver').textContent =
+          'deployed: ' + t.toLocaleString('zh-TW', {timeZone:'Asia/Taipei'});
+      }).catch(() => {});
 
     startScanner();
   </script>

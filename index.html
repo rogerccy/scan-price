@@ -392,12 +392,11 @@
       }
       list.innerHTML = entries.map(([barcode, name]) => `
         <div class="history-item">
-          <div class="history-item-info">
+          <div class="history-item-info" onclick="searchFromHistory('${name}')" style="cursor:pointer;flex:1;padding:4px 0;">
             <div class="history-item-name">${name}</div>
             <div class="history-item-barcode">${barcode}</div>
           </div>
           <div class="history-item-actions">
-            <button class="icon-btn" onclick="searchFromHistory('${name}')">🔍</button>
             <button class="icon-btn" onclick="deleteHistory('${barcode}')">🗑</button>
           </div>
         </div>

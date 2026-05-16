@@ -49,8 +49,7 @@
       padding: 2px 8px; border-radius: 20px; margin-top: 4px;
     }
     .badge-cached { background: #1a3a1a; color: #4cd964; }
-    .badge-off { background: #1a2a3a; color: #5ac8fa; }
-    .badge-off-fail { background: #3a1a1a; color: #ff9f0a; }
+    .badge-synced { background: #1a2a3a; color: #5ac8fa; }
 
     .btn {
       display: block; width: 100%; padding: 16px; border-radius: 12px;
@@ -61,24 +60,21 @@
     .btn-secondary { background: #1c1c1e; color: #fff; border: 1px solid #333; }
     .btn-danger { background: #1c1c1e; color: #ff453a; border: 1px solid #3a1a1a; }
 
-    #loading { display: none; color: #888; font-size: 14px; padding: 8px; }
-    #off-status { font-size: 12px; color: #555; min-height: 16px; }
+    #sync-status { font-size: 12px; color: #555; min-height: 16px; text-align: center; }
 
     input.text-field {
       display: none; width: 100%; padding: 14px; border-radius: 12px;
       border: 1px solid #333; background: #1c1c1e; color: #fff; font-size: 15px;
     }
 
-    /* 設定畫面 */
     #settings-section {
       display: none; width: 100%; max-width: 480px;
       padding: 24px 20px; flex-direction: column; gap: 12px;
     }
     #settings-section.show { display: flex; }
-    .settings-label { font-size: 13px; color: #888; margin-bottom: 4px; }
+    .settings-label { font-size: 13px; color: #888; }
     .settings-note { font-size: 12px; color: #555; text-align: center; line-height: 1.6; }
 
-    /* 歷史紀錄畫面 */
     #history-section {
       display: none; width: 100%; max-width: 480px;
       padding: 16px 20px; flex-direction: column; gap: 8px;
@@ -104,13 +100,11 @@
   </header>
   <p id="build-ver" style="font-size:10px;color:#666;padding:4px;"></p>
 
-  <!-- 掃描 -->
   <div id="scanner-section">
     <div id="reader"></div>
     <p id="hint">將相機對準條碼，保持穩定</p>
   </div>
 
-  <!-- 結果 -->
   <div id="result-section">
     <p class="barcode-num" id="barcode-display"></p>
     <div class="divider"></div>
@@ -118,32 +112,24 @@
       <p class="product-name" id="product-display"></p>
       <span id="status-badge" class="badge" style="display:none"></span>
     </div>
-    <p id="loading">查詢商品中...</p>
     <input id="query-input" class="text-field" type="text" placeholder="輸入中文商品名稱">
-    <p id="off-status"></p>
+    <p id="sync-status"></p>
     <button class="btn btn-primary" id="biggo-btn" onclick="openBiggo()" style="display:none;">在 BigGo 比價 →</button>
     <button class="btn btn-danger" id="forget-btn" onclick="forgetBarcode()" style="display:none;">刪除此商品記憶</button>
     <button class="btn btn-secondary" onclick="restart()">重新掃描</button>
   </div>
 
-  <!-- 設定 -->
   <div id="settings-section">
-    <p class="settings-label">Open Food Facts 帳號（用於貢獻中文商品名）</p>
-    <input id="off-user" class="text-field" type="text" placeholder="Username" style="display:block">
-    <input id="off-pass" class="text-field" type="password" placeholder="Password" style="display:block">
-    <button class="btn btn-primary" onclick="saveSettings()">儲存</button>
-    <p class="settings-note">
-      帳號密碼儲存在你的手機瀏覽器，不會上傳到任何伺服器。<br>
-      沒有帳號也可以用，只是不會自動貢獻資料給 Open Food Facts。
-    </p>
-    <div class="divider" style="width:100%; margin: 8px 0;"></div>
+    <p class="settings-label">GitHub Token（gist 權限）</p>
+    <input id="gh-token" class="text-field" type="password" placeholder="ghp_xxxx 或 gho_xxxx" style="display:block">
+    <p class="settings-label">Gist ID</p>
+    <input id="gist-id" class="text-field" type="text" placeholder="Gist ID" style="display:block">
+    <button class="btn btn-primary" onclick="saveSettings()">儲存並同步</button>
+    <p class="settings-note">資料存在你的瀏覽器，不會出現在程式碼裡。</p>
+    <div style="width:100%;height:1px;background:#222;margin:4px 0;"></div>
     <button class="btn btn-secondary" onclick="toggleHistory()">查看商品紀錄</button>
-    <button class="btn btn-secondary" onclick="exportData()">匯出條碼資料</button>
-    <textarea id="export-area" style="display:none;width:100%;height:120px;padding:12px;border-radius:12px;border:1px solid #333;background:#1c1c1e;color:#aaa;font-size:12px;font-family:monospace;resize:none;" readonly></textarea>
-    <p id="export-hint" style="display:none;font-size:12px;color:#555;text-align:center;">全選複製後貼到 Claude 對話，請他幫你上傳到 Open Food Facts</p>
   </div>
 
-  <!-- 歷史紀錄 -->
   <div id="history-section">
     <input id="history-search" class="text-field" type="search" placeholder="搜尋商品名稱..." oninput="renderHistory()" style="display:block;">
     <div id="history-list"></div>
@@ -152,12 +138,11 @@
 
   <script>
     const DB_KEY = 'barcode_names';
-    const OFF_USER_KEY = 'off_user';
-    const OFF_PASS_KEY = 'off_pass';
+    const GH_TOKEN_KEY = 'gh_token';
+    const GIST_ID_KEY = 'gist_id';
     let currentBarcode = '';
     let scanner = null;
 
-    // localStorage helpers
     function getDB() {
       try { return JSON.parse(localStorage.getItem(DB_KEY) || '{}'); } catch { return {}; }
     }
@@ -167,11 +152,47 @@
       if (!name.trim()) return;
       const db = getDB(); db[b] = name.trim(); saveDB(db);
     }
-    function getOFFCreds() {
+    function getGistCreds() {
       return {
-        user: localStorage.getItem(OFF_USER_KEY) || '',
-        pass: localStorage.getItem(OFF_PASS_KEY) || ''
+        token: localStorage.getItem(GH_TOKEN_KEY) || '',
+        gistId: localStorage.getItem(GIST_ID_KEY) || ''
       };
+    }
+
+    // Gist 同步
+    async function syncFromGist() {
+      const { token, gistId } = getGistCreds();
+      if (!token || !gistId) return;
+      try {
+        const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await res.json();
+        const content = data.files?.['barcode-names.json']?.content;
+        if (content) {
+          const remote = JSON.parse(content);
+          const merged = { ...remote, ...getDB() }; // local 優先
+          saveDB(merged);
+        }
+      } catch (_) {}
+    }
+
+    async function syncToGist() {
+      const { token, gistId } = getGistCreds();
+      if (!token || !gistId) return false;
+      try {
+        const res = await fetch(`https://api.github.com/gists/${gistId}`, {
+          method: 'PATCH',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            files: { 'barcode-names.json': { content: JSON.stringify(getDB(), null, 2) } }
+          })
+        });
+        return res.ok;
+      } catch { return false; }
     }
 
     // 設定
@@ -180,9 +201,9 @@
       const showing = s.classList.contains('show');
       hideAll();
       if (!showing) {
-        const { user, pass } = getOFFCreds();
-        document.getElementById('off-user').value = user;
-        document.getElementById('off-pass').value = pass;
+        const { token, gistId } = getGistCreds();
+        document.getElementById('gh-token').value = token;
+        document.getElementById('gist-id').value = gistId;
         s.classList.add('show');
         document.getElementById('settings-btn').textContent = '關閉';
       } else {
@@ -191,48 +212,28 @@
       }
     }
 
-    function saveSettings() {
-      localStorage.setItem(OFF_USER_KEY, document.getElementById('off-user').value.trim());
-      localStorage.setItem(OFF_PASS_KEY, document.getElementById('off-pass').value);
+    async function saveSettings() {
+      localStorage.setItem(GH_TOKEN_KEY, document.getElementById('gh-token').value.trim());
+      localStorage.setItem(GIST_ID_KEY, document.getElementById('gist-id').value.trim());
+      const btn = document.querySelector('#settings-section .btn-primary');
+      btn.textContent = '同步中...';
+      await syncFromGist();
+      btn.textContent = '儲存並同步';
       hideAll();
       document.getElementById('settings-btn').textContent = '設定';
       startScanner();
     }
 
-    // 提交到 Open Food Facts
-    async function submitToOFF(barcode, name) {
-      const { user, pass } = getOFFCreds();
-      if (!user || !pass) return null;
-
-      const body = new URLSearchParams({
-        code: barcode,
-        user_id: user,
-        password: pass,
-        'product_name_zh-TW': name,
-        product_name_zh: name,
-      });
-
-      try {
-        const res = await fetch('https://world.openfoodfacts.org/cgi/product_jqm2.pl', {
-          method: 'POST', body
-        });
-        const text = await res.text();
-        return text.includes('"status":1') || text.includes('fields saved');
-      } catch { return false; }
-    }
-
     function forgetBarcode() {
       const db = getDB(); delete db[currentBarcode]; saveDB(db);
+      syncToGist();
       document.getElementById('forget-btn').style.display = 'none';
       document.getElementById('status-badge').style.display = 'none';
     }
 
     function stopMediaTracks() {
       document.querySelectorAll('video').forEach(v => {
-        if (v.srcObject) {
-          v.srcObject.getTracks().forEach(t => t.stop());
-          v.srcObject = null;
-        }
+        if (v.srcObject) { v.srcObject.getTracks().forEach(t => t.stop()); v.srcObject = null; }
       });
     }
 
@@ -251,25 +252,20 @@
       document.getElementById('scanner-section').style.display = 'block';
       document.getElementById('hint').textContent = '將相機對準條碼，保持穩定';
       document.getElementById('settings-btn').textContent = '設定';
-
       setTimeout(() => {
         scanner = new Html5Qrcode("reader");
         scanner.start(
           { facingMode: "environment" },
           {
-            fps: 15,
-            aspectRatio: 1.7777778,
+            fps: 15, aspectRatio: 1.7777778,
             formatsToSupport: [
-              Html5QrcodeSupportedFormats.EAN_13,
-              Html5QrcodeSupportedFormats.EAN_8,
-              Html5QrcodeSupportedFormats.UPC_A,
-              Html5QrcodeSupportedFormats.UPC_E,
+              Html5QrcodeSupportedFormats.EAN_13, Html5QrcodeSupportedFormats.EAN_8,
+              Html5QrcodeSupportedFormats.UPC_A, Html5QrcodeSupportedFormats.UPC_E,
               Html5QrcodeSupportedFormats.CODE_128,
             ],
             experimentalFeatures: { useBarCodeDetectorIfSupported: true }
           },
-          onScanSuccess,
-          () => {}
+          onScanSuccess, () => {}
         ).catch(() => {
           document.getElementById('hint').textContent = '無法開啟相機，請確認已授權。';
         });
@@ -288,14 +284,13 @@
       document.getElementById('forget-btn').style.display = 'none';
       document.getElementById('biggo-btn').style.display = 'none';
       document.getElementById('query-input').style.display = 'none';
-      document.getElementById('off-status').textContent = '';
+      document.getElementById('sync-status').textContent = '';
       document.getElementById('result-section').classList.add('show');
 
-      // 先查本機快取
       const cached = getCachedName(barcode);
       if (cached) {
         document.getElementById('product-display').textContent = cached;
-        showBadge('cached-badge', '已記憶');
+        showBadge('badge-cached', '已記憶');
         document.getElementById('query-input').value = cached;
         document.getElementById('query-input').style.display = 'block';
         document.getElementById('biggo-btn').style.display = 'block';
@@ -303,34 +298,9 @@
         return;
       }
 
-      // 查 Open Food Facts
-      document.getElementById('loading').style.display = 'block';
-      let name = '';
-      try {
-        const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
-        const data = await res.json();
-        if (data.status === 1 && data.product) {
-          const p = data.product;
-          const candidate = p['product_name_zh-TW'] || p['product_name_zh']
-            || p['product_name_zh_TW'] || p['product_name_zh_HK'] || p['product_name'] || '';
-          name = /[一-鿿]/.test(candidate) ? candidate : (candidate || '');
-        }
-      } catch (_) {}
-
-      document.getElementById('loading').style.display = 'none';
-
-      const hasChinese = /[一-鿿]/.test(name);
-      if (hasChinese) {
-        document.getElementById('product-display').textContent = name;
-      } else if (name) {
-        document.getElementById('product-display').innerHTML =
-          `<span class="not-found">僅找到英文名：${name}<br>請輸入中文名稱後搜尋</span>`;
-      } else {
-        document.getElementById('product-display').innerHTML =
-          '<span class="not-found">找不到商品資料<br>請輸入中文名稱後搜尋</span>';
-      }
-
-      document.getElementById('query-input').value = hasChinese ? name : '';
+      document.getElementById('product-display').innerHTML =
+        '<span class="not-found">找不到商品名稱<br>請輸入中文名稱後搜尋</span>';
+      document.getElementById('query-input').value = '';
       document.getElementById('query-input').style.display = 'block';
       document.getElementById('biggo-btn').style.display = 'block';
     }
@@ -339,39 +309,31 @@
       const q = document.getElementById('query-input').value.trim() || currentBarcode;
       if (!q) return;
 
+      const isNew = !getCachedName(currentBarcode);
       cacheName(currentBarcode, q);
 
-      // 背景提交到 OFF（不擋住比價動作）
-      const { user } = getOFFCreds();
-      if (user && /[一-鿿]/.test(q) && !getCachedName(currentBarcode)) {
-        document.getElementById('off-status').textContent = '上傳到 Open Food Facts...';
-        submitToOFF(currentBarcode, q).then(ok => {
-          document.getElementById('off-status').textContent =
-            ok ? '已貢獻到 Open Food Facts' : '上傳失敗（已存本機）';
-        });
+      if (isNew && /[一-鿿]/.test(q)) {
+        document.getElementById('sync-status').textContent = '同步到雲端...';
+        const ok = await syncToGist();
+        document.getElementById('sync-status').textContent = ok ? '已同步' : '同步失敗（已存本機）';
       }
 
       window.open(`https://biggo.com.tw/s/${encodeURIComponent(q)}`, '_blank');
     }
 
-    function restart() {
-      window.location.reload();
-    }
+    function restart() { window.location.reload(); }
 
     function showBadge(cls, text) {
       const b = document.getElementById('status-badge');
-      b.className = 'badge ' + cls;
-      b.textContent = text;
-      b.style.display = 'inline-block';
+      b.className = 'badge ' + cls; b.textContent = text; b.style.display = 'inline-block';
     }
 
-    // 歷史紀錄
     function toggleHistory() {
       const h = document.getElementById('history-section');
       const showing = h.classList.contains('show');
       if (showing) {
         h.classList.remove('show');
-        toggleSettings(); // 回到設定
+        toggleSettings();
       } else {
         document.getElementById('settings-section').classList.remove('show');
         document.getElementById('history-search').value = '';
@@ -408,21 +370,9 @@
     }
 
     function deleteHistory(barcode) {
-      const db = getDB(); delete db[barcode]; saveDB(db); renderHistory();
-    }
-
-    function exportData() {
-      const db = getDB();
-      const area = document.getElementById('export-area');
-      const hint = document.getElementById('export-hint');
-      if (Object.keys(db).length === 0) {
-        area.value = '（尚無資料）';
-      } else {
-        area.value = JSON.stringify(db, null, 2);
-      }
-      area.style.display = 'block';
-      hint.style.display = 'block';
-      area.select();
+      const db = getDB(); delete db[barcode]; saveDB(db);
+      syncToGist();
+      renderHistory();
     }
 
     fetch('https://api.github.com/repos/rogerccy/scan-price/commits/master')
@@ -433,7 +383,7 @@
           'deployed: ' + t.toLocaleString('zh-TW', {timeZone:'Asia/Taipei'});
       }).catch(() => {});
 
-    startScanner();
+    syncFromGist().then(() => startScanner());
   </script>
 </body>
 </html>

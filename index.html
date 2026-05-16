@@ -446,6 +446,8 @@
     }
 
     function submitLens() {
+      window.open('about:blank', 'lenswindow');
+      document.getElementById('lens-form').target = 'lenswindow';
       document.getElementById('lens-form').submit();
       document.getElementById('lens-submit-btn').style.display = 'none';
       document.getElementById('lens-pick-btn').style.display = 'block';

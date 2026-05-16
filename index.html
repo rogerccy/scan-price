@@ -127,6 +127,8 @@
     <button class="btn btn-primary" onclick="saveSettings()">儲存並同步</button>
     <p class="settings-note">資料存在你的瀏覽器，不會出現在程式碼裡。</p>
     <div style="width:100%;height:1px;background:#222;margin:4px 0;"></div>
+    <button class="btn btn-secondary" id="manual-sync-btn" onclick="manualSync()">立即同步到雲端</button>
+    <p id="manual-sync-status" style="font-size:12px;color:#555;text-align:center;"></p>
     <button class="btn btn-secondary" onclick="toggleHistory()">查看商品紀錄</button>
   </div>
 
@@ -327,6 +329,20 @@
     function showBadge(cls, text) {
       const b = document.getElementById('status-badge');
       b.className = 'badge ' + cls; b.textContent = text; b.style.display = 'inline-block';
+    }
+
+    async function manualSync() {
+      const btn = document.getElementById('manual-sync-btn');
+      const status = document.getElementById('manual-sync-status');
+      btn.textContent = '同步中...';
+      btn.disabled = true;
+      const ok = await syncToGist();
+      btn.textContent = '立即同步到雲端';
+      btn.disabled = false;
+      status.textContent = ok
+        ? '✓ 已同步（' + new Date().toLocaleTimeString('zh-TW') + '）'
+        : '✗ 同步失敗，請檢查網路或 Token';
+      status.style.color = ok ? '#4cd964' : '#ff453a';
     }
 
     function toggleHistory() {

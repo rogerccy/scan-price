@@ -145,6 +145,7 @@
 
   <!-- 歷史紀錄 -->
   <div id="history-section">
+    <input id="history-search" class="text-field" type="search" placeholder="搜尋商品名稱..." oninput="renderHistory()" style="display:block;">
     <div id="history-list"></div>
     <button class="btn btn-secondary" onclick="toggleHistory()">關閉</button>
   </div>
@@ -373,6 +374,7 @@
         toggleSettings(); // 回到設定
       } else {
         document.getElementById('settings-section').classList.remove('show');
+        document.getElementById('history-search').value = '';
         renderHistory();
         h.classList.add('show');
       }
@@ -381,9 +383,11 @@
     function renderHistory() {
       const db = getDB();
       const list = document.getElementById('history-list');
-      const entries = Object.entries(db);
+      const q = (document.getElementById('history-search')?.value || '').trim().toLowerCase();
+      let entries = Object.entries(db);
+      if (q) entries = entries.filter(([, name]) => name.toLowerCase().includes(q));
       if (entries.length === 0) {
-        list.innerHTML = '<p class="history-empty">尚無記憶的商品</p>';
+        list.innerHTML = `<p class="history-empty">${q ? '找不到符合的商品' : '尚無記憶的商品'}</p>`;
         return;
       }
       list.innerHTML = entries.map(([barcode, name]) => `

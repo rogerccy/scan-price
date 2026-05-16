@@ -157,8 +157,9 @@
     <button class="btn btn-danger" id="forget-btn" onclick="forgetBarcode()" style="display:none;">刪除此商品記憶</button>
     <button class="btn btn-secondary" id="lens-pick-btn" onclick="openLens()">以圖搜尋 Google Lens →</button>
     <div id="lens-preview-wrap" style="display:none; width:100%; text-align:center;">
-      <img id="lens-preview" style="max-width:100%; border-radius:12px; max-height:220px; object-fit:contain; -webkit-touch-callout:default;">
-      <p style="font-size:12px; color:#888; margin-top:8px;">長按圖片 → 以 Google Lens 搜尋</p>
+      <img id="lens-preview" style="max-width:100%; border-radius:12px; max-height:220px; object-fit:contain;">
+      <p style="font-size:12px; color:#888; margin-top:8px;">拍好後點下方按鈕分享到 Google Lens</p>
+      <button class="btn btn-primary" style="margin-top:8px;" onclick="shareLens()">分享圖片到 Google Lens →</button>
     </div>
     <button class="btn btn-secondary" onclick="showHome()">返回</button>
   </div>
@@ -302,6 +303,7 @@
       document.getElementById('biggo-btn').style.display = 'none';
       document.getElementById('query-input').style.display = 'none';
       document.getElementById('sync-status').textContent = '';
+      lensFile = null;
       document.getElementById('lens-pick-btn').style.display = 'block';
       document.getElementById('lens-pick-btn').textContent = '以圖搜尋 Google Lens →';
       document.getElementById('lens-preview-wrap').style.display = 'none';
@@ -435,20 +437,34 @@
           'deployed: ' + t.toLocaleString('zh-TW', {timeZone:'Asia/Taipei'});
       }).catch(() => {});
 
+    let lensFile = null;
+
     function openLens() {
       const fileInput = document.getElementById('lens-file');
       fileInput.onchange = () => {
         if (!fileInput.files.length) return;
+        lensFile = fileInput.files[0];
         const reader = new FileReader();
         reader.onload = (e) => {
           document.getElementById('lens-preview').src = e.target.result;
           document.getElementById('lens-preview-wrap').style.display = 'block';
           document.getElementById('lens-pick-btn').textContent = '重新拍照';
         };
-        reader.readAsDataURL(fileInput.files[0]);
+        reader.readAsDataURL(lensFile);
         fileInput.value = '';
       };
       fileInput.click();
+    }
+
+    async function shareLens() {
+      if (!lensFile) return;
+      if (!navigator.share || !navigator.canShare({ files: [lensFile] })) {
+        alert('此裝置不支援分享，請長按圖片使用 Google Lens');
+        return;
+      }
+      try {
+        await navigator.share({ files: [lensFile], title: '商品圖片' });
+      } catch (e) {}
     }
 
     syncFromGist().then(() => showHome());
